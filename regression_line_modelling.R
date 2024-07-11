@@ -62,6 +62,8 @@ for(i in 1:nrow(changed)){{
   row <- row + 1
   }
 
+
+
 #model accounts for every step to describe a disturbance/recovery curve
 #w assumption that all iterations of savanna behaviour will fall somewhere on it
 
@@ -78,36 +80,12 @@ test_site <- site_list[[3]]
 #parameters to be optimised
 tau <- 2
 t_rise <- (test_site[test_site$tcc == min(test_site$tcc),])$year #opt
-t_drop <- t_rise - 1 #opt 
 c_start <- test_site$tcc[[1]] #needs to be optimised bc doesn't account for fluctuations etc et  al for the rest of em prior tot he drop
 c_end <- test_site$tcc[[9]] #opt
-c_drop <- (test_site[test_site$year == t_drop,])$tcc #opt
+#c_drop <- (test_site[test_site$year == t_drop,])$tcc #opt
 c_rise <- (test_site[test_site$year == t_rise,])$tcc #opt
-
-
-all_curve <- function(time, site, tau, t_rise, t_drop, c_start, c_end, c_drop, c_rise){
-  #u want to optimise girlies u dont know v well
-#to optimise is to find the most likely value
-
-  #if ur dependent on other guys dont get optimised outside
-  drop_m <- ((c_rise - c_drop)/(t_rise - t_drop))
-  drop_w <- c_drop - drop_m*t_drop #c of y = mx + c
-
-
-  out <- rep(c_start, length(time))
-  out[time<= t_drop] = c_start
-  out[time>t_drop && time<t_rise] =  drop_m * time + drop_w
-  out[time == t_rise] = c_rise
-  out[time>t_rise] = (c_end - c_rise)*(1 - (exp(-tau*(time[time>t_rise] - t_rise)))) + c_rise
-return(out) #makes her global
-  }
-
-#print(all_curve(time = 15:23, site = test_girl))
-france <- test_site$tcc
-
-new_fit <- nls( france ~ all_curve(time = 15:23, site = test_site, tau, t_rise, t_drop, c_start, c_end, c_drop, c_rise), start = list(
-  tau = tau, t_rise = t_rise, t_drop = t_drop, c_start = c_start, c_end = c_end, c_drop = c_drop, c_rise = c_rise
-))
+gap <- 2
+c_drop <- 75
 
 ##debugging
 ##options(error=recover)
@@ -115,12 +93,11 @@ new_fit <- nls( france ~ all_curve(time = 15:23, site = test_site, tau, t_rise, 
 
 ##for optimisation, parameters need to be made local
 
-
-
-
-test_curve <- function(time, site, tau, t_rise, t_drop, c_start, c_end, c_drop, c_rise){
+test_curve <- function(time, site, tau, t_rise, gap, c_start, c_end, c_rise){
   #u want to optimise girlies u dont know v well
   #to optimise is to find the most likely value
+  t_drop <- t_rise - gap
+  #c_drop <- (test_site[test_site$year == t_drop,])$tcc
   
   #if ur dependent on other guys dont get optimised outside
   drop_m <- ((c_rise - c_drop)/(t_rise - t_drop))
@@ -135,16 +112,30 @@ test_curve <- function(time, site, tau, t_rise, t_drop, c_start, c_end, c_drop, 
   return(out) #makes her global
 }
 
-t1 <- print(test_curve(time = 15:23, site = test_site, tau = 3, t_rise = 22, t_drop = 19, c_start = 88, c_end = 83, c_drop = 82, c_rise = 30 ))
-t2 <- print(test_curve(time = 15:23, site = test_site, tau = 8, t_rise = 20, t_drop = 19, c_start = 78, c_end = 83, c_drop = 82, c_rise = 15 ))
-t3 <- print(test_curve(time = 15:23, site = test_site, tau = 0.1, t_rise = 20, t_drop = 17, c_start = 78, c_end = 83, c_drop = 82, c_rise = 15 ))
-t3.5 <- print(test_curve(time = 15:23, site = test_site, tau = 0.1, t_rise = 18, t_drop = 17, c_start = 78, c_end = 83, c_drop = 82, c_rise = 15 ))
+t1 <- print(test_curve(time = 15:23, site = test_site, tau = 3, t_rise = 22, gap = 2, c_start = 88, c_end = 83, c_rise = 30 ))
+# t2 <- print(test_curve(time = 15:23, site = test_site, tau = 8, t_rise = 20, gap = 1, c_start = 78, c_end = 83, c_drop = 82, c_rise = 15 ))
+# t3 <- print(test_curve(time = 15:23, site = test_site, tau = 0.1, t_rise = 20, gap = 3, c_start = 78, c_end = 83, c_drop = 82, c_rise = 15 ))
+# t3.5 <- print(test_curve(time = 15:23, site = test_site, tau = 0.1, t_rise = 22, gap = 5, c_start = 78, c_end = 83, c_drop = 82, c_rise = 15 ))
 
-france <- test_site$tcc
 
-new_fit <- nls( france ~ test_curve(time = 15:23, site = test_site, tau, t_rise, t_drop, c_start, c_end, c_drop, c_rise), start = list(
-  tau = tau, t_rise = t_rise, t_drop = t_drop, c_start = c_start, c_end = c_end, c_drop = c_drop, c_rise = c_rise
+y_actual <- test_site$tcc
+
+# new_fit <- nls( france ~ test_curve(time = 15:23, site = test_site, tau, t_rise, gap, c_start, c_end, c_drop, c_rise), start = list(
+#   tau = tau, t_rise = t_rise, gap = gap, c_start = c_start, c_end = c_end, c_drop = c_drop, c_rise = c_rise
+# ))
+
+new_fit <- nls( y_actual ~ test_curve(time = 15:23, site = test_site, tau, t_rise, 
+gap, c_start, c_end, c_rise), start = list(tau = tau, t_rise = t_rise,
+c_start = c_start, c_end = c_end
 ))
 
+# , t_rise = t_rise, 
+# gap = gap, c_start = c_start, c_end = c_end, c_drop = c_drop, c_rise = c_rise
+#c_rise and gap are causing problems
+
+
+#if sumthing isnt running start w jes one parameter and keep going until it breaks
+
+
 #something cocked up in the event decreasing line equation (fixed)
-#during optimisation t drop can happen after t rise and we need to Stop That
+#during optimisation t drop can happen after t rise and we
